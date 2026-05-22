@@ -10,8 +10,6 @@ _version ..
 -- SERVICES
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -38,7 +36,6 @@ local Window = WindUI:CreateWindow({
     User = {
         Enabled = true,
         Anonymous = false,
-
         Callback = function()
             print("Player:", LocalPlayer.Name)
         end,
@@ -69,55 +66,6 @@ local function safeMoveTo(humanoid, hrp, position)
     end
 end
 
--- FUNÇÃO PARA VERIFICAR SE O BOTÃO ESTÁ REALMENTE NA TELA
-local function isButtonOnScreen(button)
-    local pos = button.AbsolutePosition
-    local size = button.AbsoluteSize
-    local viewport = workspace.CurrentCamera.ViewportSize
-    
-    -- Verifica se o botão está dentro dos limites da tela
-    local isOnScreen = (pos.X + size.X) > 0 and pos.X < viewport.X and
-                       (pos.Y + size.Y) > 0 and pos.Y < viewport.Y and
-                       size.X > 50 and size.Y > 30  -- Tamanho mínimo realista para botão de upgrade
-    
-    return isOnScreen
-end
-
--- FUNÇÃO PARA CLICAR NO CENTRO REAL
-local function clickRealButton(button)
-    if not button or not button.Visible then
-        return false
-    end
-    
-    local pos = button.AbsolutePosition
-    local size = button.AbsoluteSize
-    
-    -- Verifica tamanho realista (evita clicar em coisas minúsculas/invisíveis)
-    if size.X < 50 or size.Y < 30 then
-        return false
-    end
-    
-    -- Centro exato
-    local centerX = pos.X + (size.X / 2)
-    local centerY = pos.Y + (size.Y / 2)
-    
-    -- Verifica se está na tela
-    local viewport = workspace.CurrentCamera.ViewportSize
-    if centerX < 0 or centerY < 0 or centerX > viewport.X or centerY > viewport.Y then
-        return false
-    end
-    
-    print("✅ CLICANDO:", button.Name, "| Centro:", math.floor(centerX), math.floor(centerY), "| Tamanho:", math.floor(size.X), "x", math.floor(size.Y))
-    
-    pcall(function()
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-        task.wait(0.05)
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
-    end)
-    
-    return true
-end
-
 -- =========================================
 -- TAB MAIN
 -- =========================================
@@ -129,15 +77,11 @@ local TabMain = Window:Tab({
     Border = true,
 })
 
--- =========================================
 -- AUTO KICK PERFECT
--- =========================================
-
 TabMain:Button({
     Title = "Auto Kick Perfect",
     Desc = "Perfect double kick",
     Icon = "target",
-
     Callback = function()
         local _, _, hrp = getCharacter()
         local targetPos = Vector3.new(695.9, 3.0, 221.5)
@@ -156,15 +100,11 @@ TabMain:Button({
     end
 })
 
--- =========================================
 -- AUTO GET BRAINROT
--- =========================================
-
 TabMain:Button({
     Title = "Auto Get Brainrot",
     Desc = "Walks correctly",
     Icon = "brain",
-
     Callback = function()
         local _, hum, hrp = getCharacter()
         local targetPos = Vector3.new(695.9, 3.0, 221.5)
@@ -178,18 +118,13 @@ TabMain:Button({
     end
 })
 
--- =========================================
 -- AUTO KICK AND GET
--- =========================================
-
 local autoKickGet = false
-
 TabMain:Toggle({
     Title = "Auto Kick and Get",
     Desc = "Auto farms perfectly",
     Icon = "repeat",
     Default = false,
-
     Callback = function(state)
         autoKickGet = state
         if state then
@@ -225,97 +160,13 @@ TabMain:Toggle({
     end
 })
 
--- =========================================
--- CLICK BONUS - VERSÃO CORRIGIDA (SÓ CLICA EM BOTÕES REAIS)
--- =========================================
-
-local clickBonus = false
-local clickedButtons = {} -- Cache para evitar clicks repetidos
-
-TabMain:Toggle({
-    Title = "Click Bonus",
-    Desc = "Clica no centro de botões REAIS (upgrades, loja, bonus)",
-    Icon = "sparkles",
-    Default = false,
-
-    Callback = function(state)
-        clickBonus = state
-        if state then
-            print("Click Bonus ACTIVATED - Modo corrigido")
-            clickedButtons = {}
-            
-            task.spawn(function()
-                while clickBonus do
-                    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-                    
-                    if playerGui then
-                        -- Procura todos os botões
-                        local allButtons = {}
-                        for _, v in ipairs(playerGui:GetDescendants()) do
-                            if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Visible then
-                                table.insert(allButtons, v)
-                            end
-                        end
-                        
-                        -- Filtra e clica nos botões relevantes
-                        for _, btn in ipairs(allButtons) do
-                            if not clickBonus then break end
-                            
-                            local name = tostring(btn.Name):lower()
-                            local text = ""
-                            pcall(function() text = tostring(btn.Text):lower() end)
-                            
-                            -- Verifica se é botão de upgrade/loja/bonus
-                            local isRelevant = string.find(name, "upgrade") or 
-                                              string.find(name, "store") or 
-                                              string.find(name, "shop") or
-                                              string.find(name, "bonus") or
-                                              string.find(name, "run") or
-                                              string.find(text, "upgrade") or
-                                              string.find(text, "store") or
-                                              string.find(text, "bonus") or
-                                              string.find(text, "run")
-                            
-                            if isRelevant then
-                                -- Verifica se o botão é REAL (tamanho adequado e na tela)
-                                if isButtonOnScreen(btn) then
-                                    local btnId = tostring(btn) .. "_" .. tostring(btn.AbsolutePosition.X)
-                                    
-                                    -- Evita clicar no mesmo botão várias vezes seguidas
-                                    if not clickedButtons[btnId] or tick() - clickedButtons[btnId] > 3 then
-                                        local success = clickRealButton(btn)
-                                        if success then
-                                            clickedButtons[btnId] = tick()
-                                            task.wait(0.2)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    
-                    task.wait(0.4) -- Delay maior para não sobrecarregar
-                end
-            end)
-        else
-            print("Click Bonus DEACTIVATED")
-            clickedButtons = {}
-        end
-    end
-})
-
--- =========================================
 -- GOD MODE
--- =========================================
-
 local godMode = false
-
 TabMain:Toggle({
     Title = "God Mode",
     Desc = "Anti Tsunami",
     Icon = "shield",
     Default = false,
-
     Callback = function(state)
         godMode = state
         if state then
@@ -404,7 +255,6 @@ local TabMisc = Window:Tab({
 -- ANTI AFK
 local antiAfk = false
 local antiAfkConnection
-
 TabMisc:Toggle({
     Title = "Anti AFK",
     Desc = "Prevents kick",
