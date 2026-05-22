@@ -1,0 +1,471 @@
+local _version = "1.6.64-fix"
+
+local WindUI =
+loadstring(game:HttpGet(
+"https://github.com/Footagesus/WindUI/releases/download/" ..
+_version ..
+"/main.lua"
+))()
+
+-- SERVICES
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- WINDOW
+local Window = WindUI:CreateWindow({
+    Title = "Fcuklss - Kick a Lucky block",
+    Icon = "door-open",
+    Author = "by IIIbusi",
+    Folder = "FcuklssHub",
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    BackgroundImageTransparency = 0.42,
+    Mobile = true,
+
+    User = {
+        Enabled = true,
+        Anonymous = false,
+
+        Callback = function()
+            print("Player:", LocalPlayer.Name)
+        end,
+    },
+})
+
+-- CHARACTER
+local function getCharacter()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    return char, hum, hrp
+end
+
+-- SAFE MOVETO
+local function safeMoveTo(humanoid, hrp, position)
+    humanoid:MoveTo(position)
+    while true do
+        if not humanoid or humanoid.Health <= 0 then
+            return false
+        end
+        local distance = (hrp.Position - position).Magnitude
+        if distance <= 5 then
+            return true
+        end
+        humanoid:MoveTo(position)
+        task.wait(0.2)
+    end
+end
+
+-- FUNÇÃO PARA VERIFICAR SE O BOTÃO ESTÁ REALMENTE NA TELA
+local function isButtonOnScreen(button)
+    local pos = button.AbsolutePosition
+    local size = button.AbsoluteSize
+    local viewport = workspace.CurrentCamera.ViewportSize
+    
+    -- Verifica se o botão está dentro dos limites da tela
+    local isOnScreen = (pos.X + size.X) > 0 and pos.X < viewport.X and
+                       (pos.Y + size.Y) > 0 and pos.Y < viewport.Y and
+                       size.X > 50 and size.Y > 30  -- Tamanho mínimo realista para botão de upgrade
+    
+    return isOnScreen
+end
+
+-- FUNÇÃO PARA CLICAR NO CENTRO REAL
+local function clickRealButton(button)
+    if not button or not button.Visible then
+        return false
+    end
+    
+    local pos = button.AbsolutePosition
+    local size = button.AbsoluteSize
+    
+    -- Verifica tamanho realista (evita clicar em coisas minúsculas/invisíveis)
+    if size.X < 50 or size.Y < 30 then
+        return false
+    end
+    
+    -- Centro exato
+    local centerX = pos.X + (size.X / 2)
+    local centerY = pos.Y + (size.Y / 2)
+    
+    -- Verifica se está na tela
+    local viewport = workspace.CurrentCamera.ViewportSize
+    if centerX < 0 or centerY < 0 or centerX > viewport.X or centerY > viewport.Y then
+        return false
+    end
+    
+    print("✅ CLICANDO:", button.Name, "| Centro:", math.floor(centerX), math.floor(centerY), "| Tamanho:", math.floor(size.X), "x", math.floor(size.Y))
+    
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+    end)
+    
+    return true
+end
+
+-- =========================================
+-- TAB MAIN
+-- =========================================
+
+local TabMain = Window:Tab({
+    Title = "Main",
+    Icon = "play",
+    ShowTabTitle = false,
+    Border = true,
+})
+
+-- =========================================
+-- AUTO KICK PERFECT
+-- =========================================
+
+TabMain:Button({
+    Title = "Auto Kick Perfect",
+    Desc = "Perfect double kick",
+    Icon = "target",
+
+    Callback = function()
+        local _, _, hrp = getCharacter()
+        local targetPos = Vector3.new(695.9, 3.0, 221.5)
+        hrp.CFrame = CFrame.new(targetPos)
+        task.wait(0.5)
+        local distance = (hrp.Position - targetPos).Magnitude
+        if distance <= 6 then
+            local args = { [1] = 0.9705939516425133, [2] = 1 }
+            ReplicatedStorage.Shared.Packages.Network.rev_KickEvent:FireServer(unpack(args))
+            task.wait(0.1)
+            ReplicatedStorage.Shared.Packages.Network.rev_KickEvent:FireServer(unpack(args))
+            print("Perfect Kick Executed!")
+        else
+            print("Teleport Failed")
+        end
+    end
+})
+
+-- =========================================
+-- AUTO GET BRAINROT
+-- =========================================
+
+TabMain:Button({
+    Title = "Auto Get Brainrot",
+    Desc = "Walks correctly",
+    Icon = "brain",
+
+    Callback = function()
+        local _, hum, hrp = getCharacter()
+        local targetPos = Vector3.new(695.9, 3.0, 221.5)
+        print("Walking to Brainrot...")
+        local success = safeMoveTo(hum, hrp, targetPos)
+        if success then
+            print("Brainrot Reached!")
+        else
+            print("Failed.")
+        end
+    end
+})
+
+-- =========================================
+-- AUTO KICK AND GET
+-- =========================================
+
+local autoKickGet = false
+
+TabMain:Toggle({
+    Title = "Auto Kick and Get",
+    Desc = "Auto farms perfectly",
+    Icon = "repeat",
+    Default = false,
+
+    Callback = function(state)
+        autoKickGet = state
+        if state then
+            print("Auto Kick and Get ACTIVATED")
+            task.spawn(function()
+                while autoKickGet do
+                    local char, hum, hrp = getCharacter()
+                    if hum.Health > 0 then
+                        local originalPos = hrp.Position
+                        local targetPos = Vector3.new(695.9, 3.0, 221.5)
+                        hrp.CFrame = CFrame.new(targetPos)
+                        task.wait(0.5)
+                        local distance = (hrp.Position - targetPos).Magnitude
+                        if distance <= 6 then
+                            local args = { [1] = 0.9705939516425133, [2] = 1 }
+                            ReplicatedStorage.Shared.Packages.Network.rev_KickEvent:FireServer(unpack(args))
+                            task.wait(0.15)
+                            ReplicatedStorage.Shared.Packages.Network.rev_KickEvent:FireServer(unpack(args))
+                            print("Kick Done!")
+                            task.wait(0.3)
+                            local returned = safeMoveTo(hum, hrp, originalPos)
+                            if returned then
+                                print("Returned!")
+                            end
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            print("Auto Kick and Get DEACTIVATED")
+        end
+    end
+})
+
+-- =========================================
+-- CLICK BONUS - VERSÃO CORRIGIDA (SÓ CLICA EM BOTÕES REAIS)
+-- =========================================
+
+local clickBonus = false
+local clickedButtons = {} -- Cache para evitar clicks repetidos
+
+TabMain:Toggle({
+    Title = "Click Bonus",
+    Desc = "Clica no centro de botões REAIS (upgrades, loja, bonus)",
+    Icon = "sparkles",
+    Default = false,
+
+    Callback = function(state)
+        clickBonus = state
+        if state then
+            print("Click Bonus ACTIVATED - Modo corrigido")
+            clickedButtons = {}
+            
+            task.spawn(function()
+                while clickBonus do
+                    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+                    
+                    if playerGui then
+                        -- Procura todos os botões
+                        local allButtons = {}
+                        for _, v in ipairs(playerGui:GetDescendants()) do
+                            if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Visible then
+                                table.insert(allButtons, v)
+                            end
+                        end
+                        
+                        -- Filtra e clica nos botões relevantes
+                        for _, btn in ipairs(allButtons) do
+                            if not clickBonus then break end
+                            
+                            local name = tostring(btn.Name):lower()
+                            local text = ""
+                            pcall(function() text = tostring(btn.Text):lower() end)
+                            
+                            -- Verifica se é botão de upgrade/loja/bonus
+                            local isRelevant = string.find(name, "upgrade") or 
+                                              string.find(name, "store") or 
+                                              string.find(name, "shop") or
+                                              string.find(name, "bonus") or
+                                              string.find(name, "run") or
+                                              string.find(text, "upgrade") or
+                                              string.find(text, "store") or
+                                              string.find(text, "bonus") or
+                                              string.find(text, "run")
+                            
+                            if isRelevant then
+                                -- Verifica se o botão é REAL (tamanho adequado e na tela)
+                                if isButtonOnScreen(btn) then
+                                    local btnId = tostring(btn) .. "_" .. tostring(btn.AbsolutePosition.X)
+                                    
+                                    -- Evita clicar no mesmo botão várias vezes seguidas
+                                    if not clickedButtons[btnId] or tick() - clickedButtons[btnId] > 3 then
+                                        local success = clickRealButton(btn)
+                                        if success then
+                                            clickedButtons[btnId] = tick()
+                                            task.wait(0.2)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
+                    task.wait(0.4) -- Delay maior para não sobrecarregar
+                end
+            end)
+        else
+            print("Click Bonus DEACTIVATED")
+            clickedButtons = {}
+        end
+    end
+})
+
+-- =========================================
+-- GOD MODE
+-- =========================================
+
+local godMode = false
+
+TabMain:Toggle({
+    Title = "God Mode",
+    Desc = "Anti Tsunami",
+    Icon = "shield",
+    Default = false,
+
+    Callback = function(state)
+        godMode = state
+        if state then
+            print("God Mode ACTIVATED")
+            task.spawn(function()
+                while godMode do
+                    local char = LocalPlayer.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum.MaxHealth = math.huge
+                            hum.Health = math.huge
+                            hum.BreakJointsOnDeath = false
+                        end
+                    end
+                    task.wait(0.2)
+                end
+            end)
+        else
+            print("God Mode DEACTIVATED")
+            local char = LocalPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.MaxHealth = 100
+                    hum.Health = 100
+                    hum.BreakJointsOnDeath = true
+                end
+            end
+        end
+    end
+})
+
+-- =========================================
+-- TAB UPGRADES
+-- =========================================
+
+local TabUpgrades = Window:Tab({
+    Title = "Upgrades",
+    Icon = "trending-up",
+    ShowTabTitle = false,
+    Border = true,
+})
+
+TabUpgrades:Button({
+    Title = "One Speed Upgrade",
+    Desc = "Buy 1 upgrade",
+    Icon = "plus-circle",
+    Callback = function()
+        ReplicatedStorage.Shared.Packages.Network.rev_SPEED_UPGRADE:FireServer(1)
+        print("Bought 1 Speed Upgrade")
+    end
+})
+
+TabUpgrades:Button({
+    Title = "Five Speed Upgrade",
+    Desc = "Buy 5 upgrades",
+    Icon = "plus-circle",
+    Callback = function()
+        ReplicatedStorage.Shared.Packages.Network.rev_SPEED_UPGRADE:FireServer(5)
+        print("Bought 5 Speed Upgrades")
+    end
+})
+
+TabUpgrades:Button({
+    Title = "Max Speed Upgrade",
+    Desc = "Buy 10 upgrades",
+    Icon = "award",
+    Callback = function()
+        ReplicatedStorage.Shared.Packages.Network.rev_SPEED_UPGRADE:FireServer(10)
+        print("Bought Max Speed")
+    end
+})
+
+-- =========================================
+-- TAB MISC
+-- =========================================
+
+local TabMisc = Window:Tab({
+    Title = "Misc",
+    Icon = "settings",
+    ShowTabTitle = false,
+    Border = true,
+})
+
+-- ANTI AFK
+local antiAfk = false
+local antiAfkConnection
+
+TabMisc:Toggle({
+    Title = "Anti AFK",
+    Desc = "Prevents kick",
+    Icon = "clock",
+    Default = false,
+    Callback = function(state)
+        antiAfk = state
+        if state then
+            print("Anti AFK ACTIVATED")
+            antiAfkConnection = LocalPlayer.Idled:Connect(function()
+                VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+        else
+            print("Anti AFK DEACTIVATED")
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+        end
+    end
+})
+
+-- REJOIN
+TabMisc:Button({
+    Title = "Rejoin",
+    Desc = "Rejoins current server",
+    Icon = "refresh-cw",
+    Callback = function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end
+})
+
+-- SERVER HOP
+TabMisc:Button({
+    Title = "Server Hop",
+    Desc = "Join another server",
+    Icon = "globe",
+    Callback = function()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local success, response = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+        if success and response and response.data then
+            local servers = {}
+            for _, server in pairs(response.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    table.insert(servers, server.id)
+                end
+            end
+            if #servers > 0 then
+                local randomServer = servers[math.random(1, #servers)]
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer, LocalPlayer)
+            else
+                print("No Servers Found")
+            end
+        else
+            print("Failed To Fetch Servers")
+        end
+    end
+})
+
+print("Fcuklss Hub Loaded Successfully!")

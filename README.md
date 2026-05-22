@@ -1,1 +1,0 @@
-# Fcuklss---kick-a-lucky-block-
